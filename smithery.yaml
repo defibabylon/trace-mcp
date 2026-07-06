@@ -1,0 +1,12 @@
+# Smithery packaging for the Trace MCP server (same recipe as defi-intel).
+# Publishing requires the server in its own public GitHub repo first.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+  commandFunction: |-
+    (config) => ({
+      command: "python",
+      args: ["server.py"]
+    })
