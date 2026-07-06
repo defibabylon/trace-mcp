@@ -18,7 +18,7 @@ The honesty guardrail is code, not a system prompt.
 Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/tashoma/trace-mcp.git
+git clone https://github.com/defibabylon/trace-mcp.git
 cd trace-mcp
 pip install -r requirements.txt
 ```
