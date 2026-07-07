@@ -27,6 +27,39 @@
       }
     }
   },
+  "tools": [
+    {"name": "get_wizard_state", "description": "Where the user is in the Trace flow and the suggested next step",
+     "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "save_truth_base", "description": "Persist the user's Truth Base (the only ground truth Trace tailors from)",
+     "inputSchema": {"type": "object", "properties": {"truth_base_json": {"type": "string", "description": "Full Truth Base JSON document"}}, "required": ["truth_base_json"]}},
+    {"name": "get_truth_base", "description": "Return the saved Truth Base JSON",
+     "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "save_job", "description": "Persist a parsed job description (requirements + hard blockers) for a company",
+     "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "jd_parsed_json": {"type": "string", "description": "Parsed JD JSON"}}, "required": ["company", "jd_parsed_json"]}},
+    {"name": "get_job", "description": "Return the parsed job and recorded fit for a company",
+     "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}}, "required": ["company"]}},
+    {"name": "record_fit", "description": "Persist the honest fit score and apply/stretch/skip verdict for a company",
+     "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "fit_json": {"type": "string", "description": "Fit score JSON"}}, "required": ["company", "fit_json"]}},
+    {"name": "validate_receipts", "description": "The honesty gate: mechanically resolve every CV claim's JSON path against the Truth Base; fabrications fail",
+     "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "receipts_json": {"type": "string", "description": "JSON array of {claim, source}"}}, "required": ["company", "receipts_json"]}},
+    {"name": "export_document", "description": "Save a finished CV or cover letter for a company (only after receipts pass)",
+     "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "filename": {"type": "string", "description": "Simple .md filename, e.g. cv.md"}, "markdown": {"type": "string"}}, "required": ["company", "filename", "markdown"]}},
+    {"name": "list_jobs", "description": "List companies with saved jobs, fits, and exported documents",
+     "inputSchema": {"type": "object", "properties": {}}}
+  ],
+  "prompts": [
+    {"name": "trace_wizard", "description": "Start (or resume) the Trace honest-CV wizard", "text": "Run the Trace wizard: call get_wizard_state and guide the user to the next step."},
+    {"name": "parse_cv", "description": "Step 1: parse a pasted CV into the Truth Base",
+     "arguments": [{"name": "cv_text", "description": "The pasted CV text", "required": true}],
+     "text": "Parse the user's CV into a Trace Truth Base without inventing anything, then save it."},
+    {"name": "enrich", "description": "Step 2: interview the user to fill Truth Base gaps (metrics, scope, voice)", "text": "Ask 5-8 sharp questions that surface real omitted evidence, then merge truthful answers into the Truth Base."},
+    {"name": "score_fit", "description": "Step 3: parse a job description and score fit honestly (apply/stretch/skip)",
+     "arguments": [{"name": "jd_text", "description": "The pasted job description", "required": true}, {"name": "company", "description": "Company name", "required": true}],
+     "text": "Parse the JD, check hard blockers, and score the Truth Base against it honestly; be willing to say skip."},
+    {"name": "tailor", "description": "Step 4: tailor CV + cover letter with server-verified receipts",
+     "arguments": [{"name": "company", "description": "Company name (must have a recorded fit)", "required": true}],
+     "text": "Tailor a CV and cover letter grounded only in the Truth Base, validate every claim with validate_receipts, and export."}
+  ],
   "compatibility": {
     "runtimes": {
       "python": ">=3.10"

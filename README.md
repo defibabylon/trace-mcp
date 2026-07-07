@@ -70,14 +70,17 @@ Everything lives in `~/.trace/` on your machine (override with `TRACE_HOME`). No
 python test_server.py
 ```
 
-## Build the MCPB bundle (for Smithery / one-click installs)
+## Build + publish the MCPB bundle (Smithery)
 
 ```bash
 pip install --target lib mcp
-npx -y @anthropic-ai/mcpb pack . trace-mcp.mcpb
+python build_bundle.py
+npx -y smithery@latest mcp publish ./trace-mcp.mcpb -n defibabylon/trace-mcp
 ```
 
-The bundle vendors the `mcp` dependency into `lib/` (see `manifest.json`), so users only need Python 3.10+ on PATH.
+The bundle vendors the `mcp` dependency into `lib/` (see `manifest.json`), so users only need Python 3.10+ on PATH. We zip directly (`build_bundle.py`) rather than using `mcpb pack`: Smithery's registry requires MCP-spec tool `inputSchema` objects in the manifest, which `mcpb pack`'s stricter schema rejects.
+
+Live listing: https://smithery.ai/servers/defibabylon/trace-mcp
 
 ## License
 
