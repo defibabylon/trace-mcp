@@ -13,7 +13,20 @@ State dir override for tests: TRACE_HOME env var.
 import json
 import os
 import re
+import sys
 from pathlib import Path
+
+# Vendored dependencies: when lib/ ships next to this file (mcpb bundle or
+# installer layout), put it on sys.path ourselves so no PYTHONPATH is needed.
+# pywin32 (an mcp dependency on Windows) needs its subdirs added explicitly:
+# they are normally wired up by a .pth file, which PYTHONPATH entries and
+# plain sys.path inserts never process.
+_LIB = Path(__file__).resolve().parent / "lib"
+if _LIB.is_dir():
+    for _sub in ("", "win32", os.path.join("win32", "lib"), "pythonwin"):
+        _p = str(_LIB / _sub) if _sub else str(_LIB)
+        if os.path.isdir(_p) and _p not in sys.path:
+            sys.path.insert(0, _p)
 
 from mcp.server.fastmcp import FastMCP
 

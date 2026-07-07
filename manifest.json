@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "trace-mcp",
   "display_name": "Trace",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "The CV tool that won't lie for you: the full application flow in chat. Receipt-verified CVs, honest fit scores, interview prep packs with real Anki decks, and an Obsidian career vault. Your data never leaves your machine.",
   "long_description": "Trace turns your MCP client into an honest career co-pilot covering the whole application flow. Your CV is parsed into a local Truth Base (~/.trace/), an enrich interview surfaces the evidence you under-sell, jobs are scored honestly (apply / stretch / skip), tailored CVs carry per-claim receipts that the server resolves against the Truth Base in code, and each application gets an interview prep pack: company cheat sheet, question bank, a real importable Anki deck (.apkg), and a morning-of briefing script. A built-in tracker keeps statuses, and setup_obsidian turns the whole thing into an Obsidian vault: a Home dashboard and readable Truth Base note, auto-refreshed on every change, so your career memory persists and is browsable outside chat. Fabrications mechanically fail the receipts gate.",
   "author": {
@@ -22,10 +22,7 @@
     "entry_point": "server.py",
     "mcp_config": {
       "command": "python",
-      "args": ["${__dirname}/server.py"],
-      "env": {
-        "PYTHONPATH": "${__dirname}/lib"
-      }
+      "args": ["${__dirname}/server.py"]
     }
   },
   "tools": [
