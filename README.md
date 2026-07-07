@@ -91,9 +91,9 @@ Say "set up Obsidian" and Trace turns its folder into a proper [Obsidian](https:
 
 `get_wizard_state`, `save_truth_base`, `get_truth_base`, `save_job`, `get_job`, `record_fit`, `validate_receipts`, `export_document`, `list_jobs`, `set_status`, `build_anki`, `setup_obsidian`
 
-## Privacy
+## Privacy Policy
 
-Everything lives in `~/.trace/` on your machine (override with `TRACE_HOME`). Nothing is sent anywhere except the conversation you are already having with your model. Delete the folder to reset.
+Trace collects nothing: no telemetry, no accounts, no network requests of its own. Everything lives in `~/.trace/` on your machine (override with `TRACE_HOME`); nothing is sent anywhere except the conversation you are already having with your model. Delete the folder to reset. Full policy: [PRIVACY.md](https://github.com/defibabylon/trace-mcp/blob/main/PRIVACY.md)
 
 ## Test
 

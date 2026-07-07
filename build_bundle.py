@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 OUT = ROOT / "trace-mcp.mcpb"
 
-INCLUDE_FILES = ["manifest.json", "server.py", "trace_prompts.py", "LICENSE", "README.md"]
+INCLUDE_FILES = ["manifest.json", "server.py", "trace_prompts.py", "LICENSE", "README.md", "PRIVACY.md"]
 
 assert (ROOT / "lib").is_dir(), "vendor deps first: pip install --target lib mcp"
 
