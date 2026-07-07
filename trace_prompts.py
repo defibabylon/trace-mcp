@@ -28,6 +28,8 @@ First call the `get_wizard_state` tool to see where this user is, then guide the
 2. Truth Base exists but is thin -> offer the `enrich` interview.
 3. Truth Base ready -> ask for a job description to score fit against.
 4. Fit recorded -> offer to tailor the CV + cover letter with receipts.
+5. CV exported -> offer the interview prep pack (prep_pack step: cheat sheet, question bank, Anki deck, briefing script).
+6. When the user reports progress ("I applied", "they invited me to interview", "rejected") -> call `set_status` so the tracker stays true.
 
 Keep it conversational and honest. Trace is willing to tell someone NOT to apply; that honesty is the product. Never skip a step the state says is missing."""
 
@@ -127,4 +129,27 @@ Process:
 3. Call `validate_receipts` with the company name and the receipts JSON. The server resolves every path mechanically.
 4. If any receipt fails or is UNSUPPORTED: rewrite the CV to remove or reground those claims and validate again. Do not present a CV whose receipts do not pass.
 5. Call `export_document` twice (cv.md, cover_letter.md) to save the final versions.
-6. Show the user both documents, the receipts summary (all claims backed), and an honest list of any job requirements they simply do not meet."""
+6. Show the user both documents, the receipts summary (all claims backed), and an honest list of any job requirements they simply do not meet.
+7. Offer the next step: the interview prep pack for {company} (the prep_pack step)."""
+
+
+PREP_PACK = """Build the Trace interview prep pack for {company}. Call `get_truth_base` and `get_job` for {company} first. This pack turns a submitted application into a won interview; make every artifact specific to THIS company and THIS candidate, never generic.
+
+HONESTY RULES:
+- Candidate answers and stories: grounded ONLY in the Truth Base. Never script a claim the Truth Base does not support.
+- Company facts: use what you know and any web tools you have. Label anything you are not certain of as "verify before the interview". Never present a guess as a fact.
+- If you have web search available, check the company's latest news/product first; if not, say the pack is built from knowledge that may be dated.
+
+STYLE: No em dashes. Active verbs; never "helped" for outcomes the candidate owned. Plain, dense, scannable.
+
+Produce four artifacts, in this order:
+
+1. COMPANY CHEAT SHEET (one page, cheat_sheet.md) - what they do in one sentence; business model; product lines; likely current priorities and pain points relevant to this role; how this candidate's strongest Truth Base evidence maps to those pain points (cite the evidence); 5 sharp questions the candidate should ask them. Call `export_document` with filename cheat_sheet.md.
+
+2. QUESTION BANK (questions.md) - 15 to 20 questions they are likely to ask, from screening basics to the hard role-specific ones, including one aimed at the candidate's weakest gap from the fit map. For each: 2-4 answer bullets grounded in the Truth Base (no scripts to memorise, just the true material to draw from). Call `export_document` with filename questions.md.
+
+3. ANKI DECK - 20 to 30 spaced-repetition cards mixing company facts, role specifics, and the candidate's own numbers/stories (people forget their own metrics under pressure). Build the cards as a JSON array of {{"front": "...", "back": "...", "tags": ["company"|"role"|"my-evidence"]}} and call `build_anki` with the company name and the cards JSON. The server writes a real .apkg the user can import into Anki.
+
+4. BRIEFING SCRIPT (briefing.md) - a 3-4 minute read-aloud script for the morning of the interview: who they are, why this candidate fits, the three stories to lead with, the gap and how to own it honestly, the questions to ask. Written to be heard, not read. Call `export_document` with filename briefing.md.
+
+Then call `set_status` for {company} with status "preparing", and show the user a short summary of where each artifact was saved."""

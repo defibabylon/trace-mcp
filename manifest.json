@@ -2,9 +2,9 @@
   "manifest_version": "0.2",
   "name": "trace-mcp",
   "display_name": "Trace",
-  "version": "0.1.0",
-  "description": "The CV tool that won't lie for you. Every claim on a generated CV is mechanically verified against your Truth Base, which never leaves your machine.",
-  "long_description": "Trace turns your MCP client into an honest CV co-pilot. Your CV is parsed into a local Truth Base (~/.trace/), an enrich interview surfaces the evidence you under-sell, jobs are scored honestly (apply / stretch / skip), and tailored CVs carry per-claim receipts that the server resolves against the Truth Base in code. Fabrications mechanically fail the gate.",
+  "version": "0.2.0",
+  "description": "The CV tool that won't lie for you: the full application flow in chat. Receipt-verified CVs, honest fit scores, interview prep packs with real Anki decks. Your data never leaves your machine.",
+  "long_description": "Trace turns your MCP client into an honest career co-pilot covering the whole application flow. Your CV is parsed into a local Truth Base (~/.trace/), an enrich interview surfaces the evidence you under-sell, jobs are scored honestly (apply / stretch / skip), tailored CVs carry per-claim receipts that the server resolves against the Truth Base in code, and each application gets an interview prep pack: company cheat sheet, question bank, a real importable Anki deck (.apkg), and a morning-of briefing script. A built-in tracker keeps statuses. Fabrications mechanically fail the receipts gate.",
   "author": {
     "name": "AtlasFlow Systems",
     "url": "https://atlasflowsystems.co.za"
@@ -44,8 +44,12 @@
      "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "receipts_json": {"type": "string", "description": "JSON array of {claim, source}"}}, "required": ["company", "receipts_json"]}},
     {"name": "export_document", "description": "Save a finished CV or cover letter for a company (only after receipts pass)",
      "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "filename": {"type": "string", "description": "Simple .md filename, e.g. cv.md"}, "markdown": {"type": "string"}}, "required": ["company", "filename", "markdown"]}},
-    {"name": "list_jobs", "description": "List companies with saved jobs, fits, and exported documents",
-     "inputSchema": {"type": "object", "properties": {}}}
+    {"name": "list_jobs", "description": "List companies with saved jobs, fits, statuses, and exported documents",
+     "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "set_status", "description": "Track where an application stands: preparing, applied, interview, offer, rejected, withdrawn",
+     "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "status": {"type": "string", "enum": ["preparing", "applied", "interview", "offer", "rejected", "withdrawn"]}, "note": {"type": "string"}}, "required": ["company", "status"]}},
+    {"name": "build_anki", "description": "Build a real Anki deck (.apkg) from interview prep cards the user can import into Anki",
+     "inputSchema": {"type": "object", "properties": {"company": {"type": "string"}, "cards_json": {"type": "string", "description": "JSON array of {front, back, tags?}"}, "deck_name": {"type": "string"}}, "required": ["company", "cards_json"]}}
   ],
   "prompts": [
     {"name": "trace_wizard", "description": "Start (or resume) the Trace honest-CV wizard", "text": "Run the Trace wizard: call get_wizard_state and guide the user to the next step."},
@@ -58,7 +62,10 @@
      "text": "Parse the JD, check hard blockers, and score the Truth Base against it honestly; be willing to say skip."},
     {"name": "tailor", "description": "Step 4: tailor CV + cover letter with server-verified receipts",
      "arguments": [{"name": "company", "description": "Company name (must have a recorded fit)", "required": true}],
-     "text": "Tailor a CV and cover letter grounded only in the Truth Base, validate every claim with validate_receipts, and export."}
+     "text": "Tailor a CV and cover letter grounded only in the Truth Base, validate every claim with validate_receipts, and export."},
+    {"name": "prep_pack", "description": "Step 5: interview prep pack — company cheat sheet, question bank, Anki deck, briefing script",
+     "arguments": [{"name": "company", "description": "Company name (should have a tailored CV)", "required": true}],
+     "text": "Build the four-artifact interview prep pack for the company: cheat sheet, question bank grounded in the Truth Base, Anki cards via build_anki, and a read-aloud briefing script."}
   ],
   "compatibility": {
     "runtimes": {

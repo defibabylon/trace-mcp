@@ -55,10 +55,13 @@ Start with the **trace_wizard** prompt (or just say "run the Trace wizard"). Ste
 | `enrich` | Interview to fill gaps (metrics, scope, your voice) |
 | `score_fit` | Paste a JD → blockers, gap map, apply/stretch/skip |
 | `tailor` | Receipt-verified CV + cover letter, exported to `~/.trace/jobs/<company>/` |
+| `prep_pack` | Interview prep: company cheat sheet, question bank, a real Anki deck (.apkg), and a morning-of briefing script |
+
+Say "I applied" / "they invited me to interview" and the built-in tracker (`set_status`) keeps every application's status; `list_jobs` shows the whole pipeline.
 
 ## Tools (for the model)
 
-`get_wizard_state`, `save_truth_base`, `get_truth_base`, `save_job`, `get_job`, `record_fit`, `validate_receipts`, `export_document`, `list_jobs`
+`get_wizard_state`, `save_truth_base`, `get_truth_base`, `save_job`, `get_job`, `record_fit`, `validate_receipts`, `export_document`, `list_jobs`, `set_status`, `build_anki`
 
 ## Privacy
 
@@ -73,7 +76,7 @@ python test_server.py
 ## Build + publish the MCPB bundle (Smithery)
 
 ```bash
-pip install --target lib mcp
+pip install --target lib mcp genanki
 python build_bundle.py
 npx -y smithery@latest mcp publish ./trace-mcp.mcpb -n defibabylon/trace-mcp
 ```

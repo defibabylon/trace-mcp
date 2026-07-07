@@ -22,11 +22,13 @@ import trace_prompts as tp
 mcp = FastMCP(
     "trace",
     instructions=(
-        "Trace is an honest CV co-pilot. Flow: build a Truth Base from the "
-        "user's CV, enrich it with an interview, score fit against a job "
-        "honestly (willing to say skip), then tailor a CV whose every claim "
-        "is receipt-verified against the Truth Base by validate_receipts. "
-        "Start with the trace_wizard prompt or the get_wizard_state tool. "
+        "Trace is an honest CV co-pilot: the full application flow in chat. "
+        "Build a Truth Base from the user's CV, enrich it with an interview, "
+        "score fit against a job honestly (willing to say skip), tailor a CV "
+        "whose every claim is receipt-verified by validate_receipts, then "
+        "build the interview prep pack (cheat sheet, question bank, Anki deck "
+        "via build_anki, briefing script) and track applications with "
+        "set_status. Start with the trace_wizard prompt or get_wizard_state. "
         "Never invent facts about the user; the receipts check will fail."
     ),
 )
@@ -117,11 +119,15 @@ def get_wizard_state() -> str:
     if jobs_dir.exists():
         for d in sorted(jobs_dir.iterdir()):
             if d.is_dir():
+                status = None
+                if (d / "status.json").exists():
+                    status = json.loads((d / "status.json").read_text(encoding="utf-8")).get("status")
                 state["jobs"].append(
                     {
                         "company": d.name,
                         "has_fit": (d / "fit.json").exists(),
-                        "exports": sorted(p.name for p in d.glob("*.md")),
+                        "status": status,
+                        "exports": sorted(p.name for p in list(d.glob("*.md")) + list(d.glob("*.apkg"))),
                     }
                 )
     if not state["truth_base"]:
@@ -131,7 +137,18 @@ def get_wizard_state() -> str:
     elif not state["jobs"]:
         state["next_step"] = "Truth Base ready. Ask for a job description + company name to score fit."
     else:
-        state["next_step"] = "Score fit for a new job, or tailor for a job that has a fit recorded."
+        needs_prep = [
+            j["company"] for j in state["jobs"]
+            if "cv.md" in j["exports"] and "cheat_sheet.md" not in j["exports"]
+        ]
+        if needs_prep:
+            state["next_step"] = (
+                f"CV exported for {', '.join(needs_prep)} without an interview prep pack yet. "
+                "Offer the prep_pack step (cheat sheet, question bank, Anki deck, briefing). "
+                "Or score fit for a new job."
+            )
+        else:
+            state["next_step"] = "Score fit for a new job, tailor where a fit is recorded, or update statuses with set_status."
     return json.dumps(state, indent=2)
 
 
@@ -254,9 +271,70 @@ def export_document(company: str, filename: str, markdown: str) -> str:
     return f"Saved {p}"
 
 
+VALID_STATUSES = {"preparing", "applied", "interview", "offer", "rejected", "withdrawn"}
+
+
+@mcp.tool()
+def set_status(company: str, status: str, note: str = "") -> str:
+    """Track where an application stands. status must be one of:
+    preparing | applied | interview | offer | rejected | withdrawn."""
+    status = status.strip().lower()
+    if status not in VALID_STATUSES:
+        raise ValueError(f"status must be one of {sorted(VALID_STATUSES)}")
+    d = _job_dir(company, create=True)
+    (d / "status.json").write_text(
+        json.dumps({"status": status, "note": note}, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    return f"Status for '{_slug(company)}' set to {status}." + (f" Note: {note}" if note else "")
+
+
+@mcp.tool()
+def build_anki(company: str, cards_json: str, deck_name: str = "") -> str:
+    """Build a real Anki deck (.apkg) from interview prep cards. cards_json is
+    a JSON array of {front, back, tags?}. The user imports the file into Anki."""
+    import hashlib
+
+    import genanki
+
+    cards = _parse_json(cards_json, "cards_json")
+    if isinstance(cards, dict) and "cards" in cards:
+        cards = cards["cards"]
+    if not isinstance(cards, list) or not cards:
+        raise ValueError("cards_json must be a non-empty JSON array of {front, back}.")
+    for i, c in enumerate(cards):
+        if not (c.get("front") or "").strip() or not (c.get("back") or "").strip():
+            raise ValueError(f"card {i} is missing front or back text")
+
+    deck_name = deck_name.strip() or f"Trace: {company} interview prep"
+
+    # deterministic IDs so re-generating the deck updates rather than duplicates
+    def _stable_id(text):
+        return int(hashlib.md5(text.encode("utf-8")).hexdigest()[:9], 16)
+
+    model = genanki.Model(
+        _stable_id("trace-basic-model"),
+        "Trace Basic",
+        fields=[{"name": "Front"}, {"name": "Back"}],
+        templates=[{
+            "name": "Card 1",
+            "qfmt": "{{Front}}",
+            "afmt": "{{FrontSide}}<hr id=answer>{{Back}}",
+        }],
+    )
+    deck = genanki.Deck(_stable_id(f"trace-deck-{_slug(company)}"), deck_name)
+    for c in cards:
+        tags = [str(t).replace(" ", "-") for t in c.get("tags", [])]
+        deck.add_note(genanki.Note(model=model, fields=[c["front"], c["back"]], tags=tags))
+
+    d = _job_dir(company, create=True)
+    out = d / "interview_prep.apkg"
+    genanki.Package(deck).write_to_file(str(out))
+    return f"Anki deck written: {out} ({len(cards)} cards). Import it in Anki via File > Import."
+
+
 @mcp.tool()
 def list_jobs() -> str:
-    """List companies with saved jobs, fits, and exported documents."""
+    """List companies with saved jobs, fits, statuses, and exported documents."""
     jobs_dir = _home() / "jobs"
     if not jobs_dir.exists():
         return "No jobs saved yet."
@@ -267,8 +345,12 @@ def list_jobs() -> str:
             if (d / "fit.json").exists():
                 f = json.loads((d / "fit.json").read_text(encoding="utf-8"))
                 fit = f" — fit {f.get('fit_score', '?')}/100 ({f.get('verdict', '?')})"
-            docs = ", ".join(p.name for p in sorted(d.glob("*.md"))) or "no exports"
-            lines.append(f"- {d.name}{fit} — {docs}")
+            status = ""
+            if (d / "status.json").exists():
+                s = json.loads((d / "status.json").read_text(encoding="utf-8"))
+                status = f" — status: {s.get('status', '?')}"
+            docs = ", ".join(p.name for p in sorted(d.glob("*.md")) + sorted(d.glob("*.apkg"))) or "no exports"
+            lines.append(f"- {d.name}{fit}{status} — {docs}")
     return "\n".join(lines) or "No jobs saved yet."
 
 
@@ -296,6 +378,11 @@ def score_fit(jd_text: str, company: str) -> str:
 @mcp.prompt(name="tailor", description="Step 4: tailor CV + cover letter with server-verified receipts.")
 def tailor(company: str) -> str:
     return tp.TAILOR.format(company=company)
+
+
+@mcp.prompt(name="prep_pack", description="Step 5: interview prep pack — company cheat sheet, question bank, Anki deck, briefing script.")
+def prep_pack(company: str) -> str:
+    return tp.PREP_PACK.format(company=company)
 
 
 if __name__ == "__main__":

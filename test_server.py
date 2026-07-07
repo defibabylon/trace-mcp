@@ -113,6 +113,52 @@ def tools_roundtrip():
     check("list_jobs", "leeds-teaching-hospitals" in server.list_jobs())
 
 
+def prep_pack_tools():
+    print("\n[2b] prep pack tools (anki + status)")
+    sys.path.insert(0, str(Path(__file__).parent / "lib"))  # vendored genanki, as in the bundle
+
+    cards = [
+        {"front": "What did the handover redesign achieve?", "back": "Cut average handover from 40 to 25 minutes", "tags": ["my-evidence"]},
+        {"front": "Band 6 core expectation beyond Band 5?", "back": "Formal leadership: take charge, mentor, drive QI", "tags": ["role"]},
+    ]
+    out = server.build_anki("Leeds Teaching Hospitals", json.dumps(cards))
+    check("build_anki returns path", "interview_prep.apkg" in out and "2 cards" in out)
+    apkg = Path(os.environ["TRACE_HOME"]) / "jobs" / "leeds-teaching-hospitals" / "interview_prep.apkg"
+    check("apkg exists", apkg.exists() and apkg.stat().st_size > 500)
+    import sqlite3
+    import zipfile
+    with zipfile.ZipFile(apkg) as z:
+        names = z.namelist()
+        check("apkg is a valid anki zip", "collection.anki2" in names, str(names))
+        z.extract("collection.anki2", apkg.parent)
+    con = sqlite3.connect(apkg.parent / "collection.anki2")
+    n = con.execute("select count(*) from notes").fetchone()[0]
+    con.close()
+    check("apkg contains 2 notes", n == 2)
+
+    out2 = server.build_anki("Leeds Teaching Hospitals", json.dumps(cards))
+    check("anki rebuild ok (deterministic ids)", "2 cards" in out2)
+
+    try:
+        server.build_anki("Leeds Teaching Hospitals", json.dumps([{"front": "x", "back": ""}]))
+        check("empty card rejected", False)
+    except ValueError:
+        check("empty card rejected", True)
+
+    out = server.set_status("Leeds Teaching Hospitals", "applied", "submitted via NHS Jobs")
+    check("set_status", "applied" in out)
+    try:
+        server.set_status("Leeds Teaching Hospitals", "ghosted")
+        check("invalid status rejected", False)
+    except ValueError:
+        check("invalid status rejected", True)
+    check("status in list_jobs", "status: applied" in server.list_jobs())
+
+    state = json.loads(server.get_wizard_state())
+    check("wizard state carries status", state["jobs"][0]["status"] == "applied")
+    check("wizard state suggests prep pack", "prep_pack" in state["next_step"], state["next_step"])
+
+
 async def stdio_handshake():
     print("\n[3] stdio handshake (real transport)")
     from mcp import ClientSession, StdioServerParameters
@@ -127,10 +173,10 @@ async def stdio_handshake():
         async with ClientSession(r, w) as sess:
             await sess.initialize()
             tools = {t.name for t in (await sess.list_tools()).tools}
-            need = {"get_wizard_state", "save_truth_base", "get_truth_base", "save_job", "get_job", "record_fit", "validate_receipts", "export_document", "list_jobs"}
-            check("all 9 tools listed", need <= tools, str(need - tools))
+            need = {"get_wizard_state", "save_truth_base", "get_truth_base", "save_job", "get_job", "record_fit", "validate_receipts", "export_document", "list_jobs", "set_status", "build_anki"}
+            check("all 11 tools listed", need <= tools, str(need - tools))
             prompts = {p.name for p in (await sess.list_prompts()).prompts}
-            check("all 5 prompts listed", {"trace_wizard", "parse_cv", "enrich", "score_fit", "tailor"} <= prompts, str(prompts))
+            check("all 6 prompts listed", {"trace_wizard", "parse_cv", "enrich", "score_fit", "tailor", "prep_pack"} <= prompts, str(prompts))
             res = await sess.call_tool("get_wizard_state", {})
             state = json.loads(res.content[0].text)
             check("get_wizard_state over the wire", state["truth_base"]["name"] == "Priya Osei")
@@ -141,6 +187,7 @@ async def stdio_handshake():
 if __name__ == "__main__":
     unit_resolver()
     tools_roundtrip()
+    prep_pack_tools()
     asyncio.run(stdio_handshake())
     print("\n" + ("ALL TESTS PASSED" if not FAILS else f"{len(FAILS)} FAILURE(S): {FAILS}"))
     sys.exit(1 if FAILS else 0)
