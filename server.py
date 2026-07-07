@@ -13,20 +13,70 @@ State dir override for tests: TRACE_HOME env var.
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
-# Vendored dependencies: when lib/ ships next to this file (mcpb bundle or
-# installer layout), put it on sys.path ourselves so no PYTHONPATH is needed.
-# pywin32 (an mcp dependency on Windows) needs its subdirs added explicitly:
-# they are normally wired up by a .pth file, which PYTHONPATH entries and
-# plain sys.path inserts never process.
-_LIB = Path(__file__).resolve().parent / "lib"
-if _LIB.is_dir():
-    for _sub in ("", "win32", os.path.join("win32", "lib"), "pythonwin"):
-        _p = str(_LIB / _sub) if _sub else str(_LIB)
-        if os.path.isdir(_p) and _p not in sys.path:
-            sys.path.insert(0, _p)
+# --- dependency bootstrap -----------------------------------------------------
+# The bundle vendors deps in lib/, but compiled wheels (pydantic_core, etc.)
+# only load on the platform + Python version they were built for. So: probe
+# what works in a subprocess, and if nothing does, self-install the right
+# wheels once into ~/.trace/_deps/<tag>. One bundle, every platform.
+# pywin32 (an mcp dep on Windows) needs its subdirs added explicitly: they are
+# normally wired by a .pth file, which PYTHONPATH entries never process.
+_PYTAG = f"py{sys.version_info[0]}{sys.version_info[1]}-{sys.platform}"
+_DEP_SUBDIRS = ("", "win32", os.path.join("win32", "lib"), "pythonwin")
+
+
+def _add_site(base: Path):
+    for sub in _DEP_SUBDIRS:
+        p = str(base / sub) if sub else str(base)
+        if os.path.isdir(p) and p not in sys.path:
+            sys.path.insert(0, p)
+
+
+def _imports_ok(base=None) -> bool:
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    if base is not None:
+        if not base.is_dir():
+            return False
+        env["PYTHONPATH"] = os.pathsep.join(
+            str(base / s) if s else str(base) for s in _DEP_SUBDIRS
+        )
+    r = subprocess.run(
+        [sys.executable, "-c", "import mcp.server.fastmcp, genanki"],
+        capture_output=True, env=env,
+    )
+    return r.returncode == 0
+
+
+def _bootstrap_deps():
+    if _imports_ok():  # environment already has working deps
+        return
+    bundled = Path(__file__).resolve().parent / "lib"
+    if _imports_ok(bundled):  # vendored deps match this platform/Python
+        _add_site(bundled)
+        return
+    deps = Path(os.environ.get("TRACE_HOME", Path.home() / ".trace")) / "_deps" / _PYTAG
+    if _imports_ok(deps):  # self-installed on a previous run
+        _add_site(deps)
+        return
+    print(f"Trace first-run setup: installing dependencies for {_PYTAG} "
+          "(one time, needs internet)...", file=sys.stderr)
+    deps.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--target", str(deps), "mcp", "genanki"],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0 or not _imports_ok(deps):
+        sys.exit(
+            "Trace could not install its dependencies. Check that pip works and "
+            "you are online, then restart. pip said:\n" + (r.stderr or r.stdout or "")[-800:]
+        )
+    _add_site(deps)
+
+
+_bootstrap_deps()
 
 from mcp.server.fastmcp import FastMCP
 
