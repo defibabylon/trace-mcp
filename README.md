@@ -17,7 +17,23 @@ The honesty guardrail is code, not a system prompt.
 
 Requires Python 3.10+ on PATH ([python.org/downloads](https://www.python.org/downloads/); on Windows tick "Add python.exe to PATH"). No API key: the model you're already talking to does the generation.
 
-### Claude Desktop (easiest — one click)
+### Claude Desktop — automatic (one command)
+
+Paste one line into a terminal and everything is done for you (download, install, config registration with a backup of your existing config):
+
+**Windows** (PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/defibabylon/trace-mcp/main/install.ps1 | iex"
+```
+
+**macOS / Linux**:
+```bash
+curl -fsSL https://raw.githubusercontent.com/defibabylon/trace-mcp/main/install.sh | bash
+```
+
+Restart Claude Desktop, then say **"run the Trace wizard"**.
+
+### Claude Desktop — one click (.mcpb)
 
 1. Download **trace-mcp.mcpb** from the [latest release](https://github.com/defibabylon/trace-mcp/releases/latest) (dependencies are bundled inside).
 2. Double-click the file, or in Claude Desktop go to **Settings → Extensions** and drop it there.
