@@ -70,6 +70,15 @@ Everything lives in `~/.trace/` on your machine (override with `TRACE_HOME`). No
 python test_server.py
 ```
 
+## Build the MCPB bundle (for Smithery / one-click installs)
+
+```bash
+pip install --target lib mcp
+npx -y @anthropic-ai/mcpb pack . trace-mcp.mcpb
+```
+
+The bundle vendors the `mcp` dependency into `lib/` (see `manifest.json`), so users only need Python 3.10+ on PATH.
+
 ## License
 
 MIT — [AtlasFlow Systems](https://atlasflowsystems.co.za). Trace is an AtlasFlow product; the full web app (no MCP client needed) is in development.

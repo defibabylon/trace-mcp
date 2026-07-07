@@ -1,0 +1,35 @@
+{
+  "manifest_version": "0.2",
+  "name": "trace-mcp",
+  "display_name": "Trace",
+  "version": "0.1.0",
+  "description": "The CV tool that won't lie for you. Every claim on a generated CV is mechanically verified against your Truth Base, which never leaves your machine.",
+  "long_description": "Trace turns your MCP client into an honest CV co-pilot. Your CV is parsed into a local Truth Base (~/.trace/), an enrich interview surfaces the evidence you under-sell, jobs are scored honestly (apply / stretch / skip), and tailored CVs carry per-claim receipts that the server resolves against the Truth Base in code. Fabrications mechanically fail the gate.",
+  "author": {
+    "name": "AtlasFlow Systems",
+    "url": "https://atlasflowsystems.co.za"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/defibabylon/trace-mcp"
+  },
+  "homepage": "https://github.com/defibabylon/trace-mcp",
+  "license": "MIT",
+  "keywords": ["cv", "resume", "career", "job-search", "honesty", "interview"],
+  "server": {
+    "type": "python",
+    "entry_point": "server.py",
+    "mcp_config": {
+      "command": "python",
+      "args": ["${__dirname}/server.py"],
+      "env": {
+        "PYTHONPATH": "${__dirname}/lib"
+      }
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "python": ">=3.10"
+    }
+  }
+}
