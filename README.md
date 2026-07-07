@@ -15,21 +15,17 @@ The honesty guardrail is code, not a system prompt.
 
 ## Install
 
-Requires Python 3.10+.
+Requires Python 3.10+ on PATH ([python.org/downloads](https://www.python.org/downloads/); on Windows tick "Add python.exe to PATH"). No API key: the model you're already talking to does the generation.
 
-```bash
-git clone https://github.com/defibabylon/trace-mcp.git
-cd trace-mcp
-pip install -r requirements.txt
-```
+### Claude Desktop (easiest — one click)
 
-Claude Code (from the repo directory):
+1. Download **trace-mcp.mcpb** from the [latest release](https://github.com/defibabylon/trace-mcp/releases/latest) (dependencies are bundled inside).
+2. Double-click the file, or in Claude Desktop go to **Settings → Extensions** and drop it there.
+3. Click **Install**, then start a new chat and say **"run the Trace wizard"**.
 
-```bash
-claude mcp add trace -- python server.py
-```
+### Claude Desktop (manual config)
 
-Claude Desktop (`claude_desktop_config.json`):
+Clone the repo, run `pip install -r requirements.txt`, then add to `claude_desktop_config.json` (Settings → Developer → Edit Config):
 
 ```json
 {
@@ -42,7 +38,19 @@ Claude Desktop (`claude_desktop_config.json`):
 }
 ```
 
-No API key. The model you're already talking to does the generation.
+Restart Claude Desktop; the Trace tools appear under the 🔌 icon.
+
+### Claude Code
+
+```bash
+git clone https://github.com/defibabylon/trace-mcp.git
+cd trace-mcp && pip install -r requirements.txt
+claude mcp add trace -- python server.py
+```
+
+### Smithery
+
+From the [Smithery listing](https://smithery.ai/servers/defibabylon/trace-mcp) or CLI: `npx -y smithery@latest mcp add defibabylon/trace-mcp --client claude`
 
 ## Use
 
