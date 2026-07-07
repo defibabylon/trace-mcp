@@ -159,6 +159,25 @@ def prep_pack_tools():
     check("wizard state suggests prep pack", "prep_pack" in state["next_step"], state["next_step"])
 
 
+def obsidian_vault():
+    print("\n[2c] obsidian vault")
+    out = server.setup_obsidian()
+    check("setup_obsidian returns instructions", "Open folder as vault" in out)
+    home = Path(os.environ["TRACE_HOME"])
+    hometext = (home / "Home.md").read_text(encoding="utf-8")
+    tbtext = (home / "Truth Base.md").read_text(encoding="utf-8")
+    check("Home.md dashboard exists", "# Trace — Career Vault" in hometext)
+    check("Home.md lists the job + status", "leeds-teaching-hospitals" in hometext and "**applied**" in hometext)
+    check("Home.md links documents", "(jobs/leeds-teaching-hospitals/cv.md)" in hometext)
+    check("Truth Base.md renders identity", "Priya Osei" in tbtext)
+    check("Truth Base.md renders metrics", "**[6 students]**" in tbtext)
+
+    # auto-refresh on state change
+    server.set_status("Leeds Teaching Hospitals", "interview")
+    hometext = (home / "Home.md").read_text(encoding="utf-8")
+    check("vault auto-refreshes on status change", "**interview**" in hometext)
+
+
 async def stdio_handshake():
     print("\n[3] stdio handshake (real transport)")
     from mcp import ClientSession, StdioServerParameters
@@ -173,8 +192,8 @@ async def stdio_handshake():
         async with ClientSession(r, w) as sess:
             await sess.initialize()
             tools = {t.name for t in (await sess.list_tools()).tools}
-            need = {"get_wizard_state", "save_truth_base", "get_truth_base", "save_job", "get_job", "record_fit", "validate_receipts", "export_document", "list_jobs", "set_status", "build_anki"}
-            check("all 11 tools listed", need <= tools, str(need - tools))
+            need = {"get_wizard_state", "save_truth_base", "get_truth_base", "save_job", "get_job", "record_fit", "validate_receipts", "export_document", "list_jobs", "set_status", "build_anki", "setup_obsidian"}
+            check("all 12 tools listed", need <= tools, str(need - tools))
             prompts = {p.name for p in (await sess.list_prompts()).prompts}
             check("all 6 prompts listed", {"trace_wizard", "parse_cv", "enrich", "score_fit", "tailor", "prep_pack"} <= prompts, str(prompts))
             res = await sess.call_tool("get_wizard_state", {})
@@ -188,6 +207,7 @@ if __name__ == "__main__":
     unit_resolver()
     tools_roundtrip()
     prep_pack_tools()
+    obsidian_vault()
     asyncio.run(stdio_handshake())
     print("\n" + ("ALL TESTS PASSED" if not FAILS else f"{len(FAILS)} FAILURE(S): {FAILS}"))
     sys.exit(1 if FAILS else 0)

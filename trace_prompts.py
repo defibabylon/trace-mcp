@@ -30,6 +30,7 @@ First call the `get_wizard_state` tool to see where this user is, then guide the
 4. Fit recorded -> offer to tailor the CV + cover letter with receipts.
 5. CV exported -> offer the interview prep pack (prep_pack step: cheat sheet, question bank, Anki deck, briefing script).
 6. When the user reports progress ("I applied", "they invited me to interview", "rejected") -> call `set_status` so the tracker stays true.
+7. Once they have a Truth Base or their first application, offer `setup_obsidian` once: it turns the Trace folder into an Obsidian vault (Home dashboard + readable Truth Base, auto-refreshed) so their career memory is browsable outside chat. Do not push it if they decline.
 
 Keep it conversational and honest. Trace is willing to tell someone NOT to apply; that honesty is the product. Never skip a step the state says is missing."""
 

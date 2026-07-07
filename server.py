@@ -64,6 +64,77 @@ def _parse_json(raw: str, what: str):
         raise ValueError(f"{what} is not valid JSON: {e}") from e
 
 
+# --- obsidian vault rendering -------------------------------------------------
+# ~/.trace doubles as an Obsidian vault: exports are already markdown, and
+# these two notes (auto-refreshed on every state change) make it a browsable
+# persistent career memory. Open the folder as a vault in Obsidian.
+def _render_vault():
+    home = _home()
+    tb = json.loads(_tb_path().read_text(encoding="utf-8")) if _tb_path().exists() else None
+
+    # Truth Base.md — human-readable render of the machine truth
+    if tb:
+        lines = ["# Truth Base", "", "> The single source of truth Trace tailors from.",
+                 "> Machine copy: `truth_base.json` (edit via the enrich interview, not by hand).", ""]
+        ident = tb.get("identity", {})
+        if ident.get("name"):
+            lines.append(f"**{ident['name']}** — {ident.get('location', '')}".rstrip(" —"))
+        if ident.get("work_auth"):
+            lines.append(f"Work auth: {ident['work_auth']}")
+        if tb.get("voice_sample"):
+            lines += ["", f"> *\"{tb['voice_sample']}\"*"]
+        for r in tb.get("roles", []):
+            lines += ["", f"## {r.get('title', '?')} — {r.get('org', '?')}",
+                      f"*{r.get('dates', '')}*" + (f" · {r['scope']}" if r.get("scope") else "")]
+            for a in r.get("achievements", []):
+                metric = f" **[{a['metric']}]**" if a.get("metric") else ""
+                tag = a.get("evidence_tag", "")
+                lines.append(f"- {a.get('statement', '')}{metric} `{tag}`")
+        for section, key in [("Skills", "skills"), ("Tools", "tools"), ("Education", "education"),
+                             ("Certifications", "certs"), ("Licenses", "licenses"), ("Artifacts", "artifacts")]:
+            vals = tb.get(key) or []
+            if vals:
+                lines += ["", f"## {section}", ", ".join(str(v) for v in vals)]
+        (home / "Truth Base.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    # Home.md — the dashboard
+    lines = ["# Trace — Career Vault", "",
+             "Your job hunt's persistent memory. Maintained by the Trace MCP wizard; safe to read and annotate.", ""]
+    if tb:
+        roles = tb.get("roles", [])
+        ach = [a for r in roles for a in r.get("achievements", [])]
+        lines += [f"**[[Truth Base]]** — {len(roles)} role(s), {len(ach)} achievement(s), "
+                  f"{sum(1 for a in ach if a.get('metric'))} with metrics.", ""]
+    else:
+        lines += ["*No Truth Base yet — paste your CV into the wizard to start.*", ""]
+    lines.append("## Applications")
+    jobs_dir = home / "jobs"
+    any_jobs = False
+    if jobs_dir.exists():
+        for d in sorted(jobs_dir.iterdir()):
+            if not d.is_dir():
+                continue
+            any_jobs = True
+            fit = ""
+            if (d / "fit.json").exists():
+                f = json.loads((d / "fit.json").read_text(encoding="utf-8"))
+                fit = f" · fit **{f.get('fit_score', '?')}/100** ({f.get('verdict', '?')})"
+            status = ""
+            if (d / "status.json").exists():
+                s = json.loads((d / "status.json").read_text(encoding="utf-8"))
+                status = f" · status **{s.get('status', '?')}**"
+            lines.append(f"### {d.name}{fit}{status}")
+            docs = sorted(d.glob("*.md")) + sorted(d.glob("*.apkg"))
+            for p in docs:
+                lines.append(f"- [{p.stem}](jobs/{d.name}/{p.name.replace(' ', '%20')})")
+            if not docs:
+                lines.append("- *no documents yet*")
+            lines.append("")
+    if not any_jobs:
+        lines += ["*No applications tracked yet.*", ""]
+    (home / "Home.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 # --- receipt path resolver ---------------------------------------------------
 _TOKEN = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)|\[(\d+)\]")
 
@@ -160,6 +231,7 @@ def save_truth_base(truth_base_json: str) -> str:
     if not isinstance(tb, dict) or "roles" not in tb:
         raise ValueError("Truth Base must be an object with at least a 'roles' array.")
     _tb_path().write_text(json.dumps(tb, indent=2, ensure_ascii=False), encoding="utf-8")
+    _render_vault()
     roles = tb.get("roles", [])
     ach = [a for r in roles for a in r.get("achievements", [])]
     return (
@@ -185,6 +257,7 @@ def save_job(company: str, jd_parsed_json: str) -> str:
     jd = _parse_json(jd_parsed_json, "jd_parsed_json")
     d = _job_dir(company, create=True)
     (d / "job.json").write_text(json.dumps(jd, indent=2, ensure_ascii=False), encoding="utf-8")
+    _render_vault()
     return f"Job saved for '{_slug(company)}' ({len(jd.get('requirements', []))} requirements, {len(jd.get('hard_blockers', []))} hard blocker(s))."
 
 
@@ -207,6 +280,7 @@ def record_fit(company: str, fit_json: str) -> str:
     fit = _parse_json(fit_json, "fit_json")
     d = _job_dir(company, create=True)
     (d / "fit.json").write_text(json.dumps(fit, indent=2, ensure_ascii=False), encoding="utf-8")
+    _render_vault()
     return f"Fit recorded for '{_slug(company)}': {fit.get('fit_score', '?')}/100, verdict={fit.get('verdict', '?')}."
 
 
@@ -268,6 +342,7 @@ def export_document(company: str, filename: str, markdown: str) -> str:
     d = _job_dir(company, create=True)
     p = d / filename
     p.write_text(markdown, encoding="utf-8")
+    _render_vault()
     return f"Saved {p}"
 
 
@@ -285,6 +360,7 @@ def set_status(company: str, status: str, note: str = "") -> str:
     (d / "status.json").write_text(
         json.dumps({"status": status, "note": note}, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    _render_vault()
     return f"Status for '{_slug(company)}' set to {status}." + (f" Note: {note}" if note else "")
 
 
@@ -329,7 +405,24 @@ def build_anki(company: str, cards_json: str, deck_name: str = "") -> str:
     d = _job_dir(company, create=True)
     out = d / "interview_prep.apkg"
     genanki.Package(deck).write_to_file(str(out))
+    _render_vault()
     return f"Anki deck written: {out} ({len(cards)} cards). Import it in Anki via File > Import."
+
+
+@mcp.tool()
+def setup_obsidian() -> str:
+    """Set up the Trace state folder as an Obsidian vault: a Home.md dashboard
+    and a readable Truth Base.md, auto-refreshed on every change. Gives the
+    user a persistent, browsable career memory."""
+    _render_vault()
+    home = _home()
+    made = [p.name for p in [home / "Home.md", home / "Truth Base.md"] if p.exists()]
+    return (
+        f"Vault ready at {home} ({', '.join(made)} generated; they refresh automatically on every change).\n"
+        f"To browse it: open Obsidian (free, obsidian.md) > Open folder as vault > choose {home}. "
+        "Start from Home.md. All CVs, cover letters, prep packs and statuses live there as linked notes; "
+        "annotate freely, Trace only rewrites Home.md and Truth Base.md."
+    )
 
 
 @mcp.tool()

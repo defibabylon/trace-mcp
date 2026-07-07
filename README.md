@@ -59,9 +59,13 @@ Start with the **trace_wizard** prompt (or just say "run the Trace wizard"). Ste
 
 Say "I applied" / "they invited me to interview" and the built-in tracker (`set_status`) keeps every application's status; `list_jobs` shows the whole pipeline.
 
+## Obsidian career vault
+
+Say "set up Obsidian" and Trace turns its folder into a proper [Obsidian](https://obsidian.md) vault: a **Home.md** dashboard (every application with fit, status, and linked documents) and a readable **Truth Base.md**, both auto-refreshed on every change. Open the folder as a vault and your job hunt has persistent, browsable memory outside chat. Your own notes are never touched; Trace only rewrites those two files.
+
 ## Tools (for the model)
 
-`get_wizard_state`, `save_truth_base`, `get_truth_base`, `save_job`, `get_job`, `record_fit`, `validate_receipts`, `export_document`, `list_jobs`, `set_status`, `build_anki`
+`get_wizard_state`, `save_truth_base`, `get_truth_base`, `save_job`, `get_job`, `record_fit`, `validate_receipts`, `export_document`, `list_jobs`, `set_status`, `build_anki`, `setup_obsidian`
 
 ## Privacy
 
